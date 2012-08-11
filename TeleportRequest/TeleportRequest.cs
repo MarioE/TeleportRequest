@@ -111,17 +111,23 @@ namespace TeleportRequest
             }
             else
             {
-                TPRequest tpr = new TPRequest((byte)e.Player.Index, (byte)players[0].Index, false, Config.Timeout);
                 lock (TPRequests)
                 {
-                    TPRequests.Add(tpr);
+                    foreach (TPRequest tpr in TPRequests)
+                    {
+                        if (tpr.dst == players[0].Index)
+                        {
+                            e.Player.SendMessage(String.Format("{0} already has a teleport request.", players[0].Name), Color.Red);
+                            return;
+                        }
+                    }
+                    TPRequests.Add(new TPRequest((byte)e.Player.Index, (byte)players[0].Index, false, Config.Timeout));
                 }
                 e.Player.SendMessage(String.Format("Sent a teleport request to {0}.", players[0].Name), Color.Green);
             }
         }
         void TPAccept(CommandArgs e)
         {
-            int count = 0;
             lock (TPRequests)
             {
                 for (int i = TPRequests.Count - 1; i >= 0; i--)
@@ -137,14 +143,11 @@ namespace TeleportRequest
                             plr2.SendMessage(String.Format("{0} teleported to you.", plr1.Name), Color.Green);
                         }
                         TPRequests.RemoveAt(i);
-                        count++;
+                        return;
                     }
                 }
             }
-            if (count == 0)
-            {
-                e.Player.SendMessage("There are no teleport requests.", Color.Red);
-            }
+            e.Player.SendMessage("There are no teleport requests.", Color.Red);
         }
         void TPAHere(CommandArgs e)
         {
@@ -165,17 +168,23 @@ namespace TeleportRequest
             }
             else
             {
-                TPRequest tpr = new TPRequest((byte)e.Player.Index, (byte)players[0].Index, true, Config.Timeout);
                 lock (TPRequests)
                 {
-                    TPRequests.Add(tpr);
+                    foreach (TPRequest tpr in TPRequests)
+                    {
+                        if (tpr.dst == players[0].Index)
+                        {
+                            e.Player.SendMessage(String.Format("{0} already has a teleport request.", players[0].Name), Color.Red);
+                            return;
+                        }
+                    }
+                    TPRequests.Add(new TPRequest((byte)e.Player.Index, (byte)players[0].Index, true, Config.Timeout));
                 }
                 e.Player.SendMessage(String.Format("Sent a teleport request to {0}.", players[0].Name), Color.Green);
             }
         }
         void TPDeny(CommandArgs e)
         {
-            int count = 0;
             lock (TPRequests)
             {
                 for (int i = TPRequests.Count - 1; i >= 0; i--)
@@ -187,14 +196,11 @@ namespace TeleportRequest
                         e.Player.SendMessage(String.Format("Denied {0}'s request.", plr.Name), Color.Green);
                         plr.SendMessage(String.Format("{0} denied your request.", e.Player.Name), Color.Red);
                         TPRequests.RemoveAt(i);
-                        count++;
+                        return;
                     }
                 }
             }
-            if (count == 0)
-            {
-                e.Player.SendMessage("There are no teleport requests.", Color.Red);
-            }
+            e.Player.SendMessage("There are no teleport requests.", Color.Red);
         }
     }
 }
