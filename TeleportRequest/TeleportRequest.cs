@@ -35,6 +35,7 @@ namespace TeleportRequest
         public TeleportRequest(Main game)
             : base(game)
         {
+            Order = -5;
         }
 
         protected override void Dispose(bool disposing)
@@ -61,6 +62,12 @@ namespace TeleportRequest
                     {
                         TPRequests.RemoveAt(i);
                         TShock.Players[tpr.src].SendMessage("Your teleport request timed out.", Color.Red);
+                    }
+                    else if (!TShock.Players[tpr.dst].TPAllow)
+                    {
+                        TPRequests.RemoveAt(i);
+                        TShock.Players[tpr.src].SendMessage(String.Format("{0} denied your request.",
+                            TShock.Players[tpr.dst].Name), Color.Red);
                     }
                     else
                     {
