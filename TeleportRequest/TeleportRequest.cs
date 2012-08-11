@@ -10,7 +10,7 @@ using TShockAPI;
 namespace TeleportRequest
 {
     [APIVersion(1, 12)]
-    public class Teleport : TerrariaPlugin
+    public class TeleportRequest : TerrariaPlugin
     {
         public override string Author
         {
@@ -32,7 +32,7 @@ namespace TeleportRequest
             get { return Assembly.GetExecutingAssembly().GetName().Version; }
         }
 
-        public Teleport(Main game)
+        public TeleportRequest(Main game)
             : base(game)
         {
         }
