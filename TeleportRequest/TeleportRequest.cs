@@ -35,7 +35,6 @@ namespace TeleportRequest
         public TeleportRequest(Main game)
             : base(game)
         {
-            Order = -5;
         }
 
         protected override void Dispose(bool disposing)
@@ -43,12 +42,14 @@ namespace TeleportRequest
             if (disposing)
             {
                 GameHooks.Initialize -= OnInitialize;
+                ServerHooks.Leave -= OnLeave;
                 Timer.Dispose();
             }
         }
         public override void Initialize()
         {
             GameHooks.Initialize += OnInitialize;
+            ServerHooks.Leave += OnLeave;
         }
 
         void OnElapsed(object sender, ElapsedEventArgs e)
@@ -58,16 +59,13 @@ namespace TeleportRequest
                 for (int i = TPRequests.Count - 1; i >= 0; i--)
                 {
                     TPRequest tpr = TPRequests[i];
+                    TSPlayer dst = TShock.Players[tpr.dst];
+                    TSPlayer src = TShock.Players[tpr.src];
                     if (tpr.timeout == 0)
                     {
                         TPRequests.RemoveAt(i);
-                        TShock.Players[tpr.src].SendMessage("Your teleport request timed out.", Color.Red);
-                    }
-                    else if (!TShock.Players[tpr.dst].TPAllow)
-                    {
-                        TPRequests.RemoveAt(i);
-                        TShock.Players[tpr.src].SendMessage(String.Format("{0} denied your request.",
-                            TShock.Players[tpr.dst].Name), Color.Red);
+                        src.SendMessage("Your teleport request timed out.", Color.Red);
+                        dst.SendMessage(String.Format("{0}'s teleport request timed out.", src.Name), Color.Yellow);
                     }
                     else
                     {
@@ -76,7 +74,7 @@ namespace TeleportRequest
                         {
                             msg = "You are requested to teleport to {0}. (/tpaccept or /tpdeny)";
                         }
-                        TShock.Players[tpr.dst].SendMessage(String.Format(msg, TShock.Players[tpr.src].Name), Color.Yellow);
+                        dst.SendMessage(String.Format(msg, src.Name), Color.LimeGreen);
                     }
                     tpr.timeout--;
                 }
@@ -98,6 +96,13 @@ namespace TeleportRequest
             Timer.Elapsed += OnElapsed;
             Timer.Start();
         }
+        void OnLeave(int plr)
+        {
+            lock (TPRequests)
+            {
+                TPRequests.RemoveAll(tpr => tpr.dst == plr || tpr.src == plr);
+            }
+        }
 
         void TPA(CommandArgs e)
         {
@@ -115,6 +120,10 @@ namespace TeleportRequest
             else if (players.Count > 1)
             {
                 e.Player.SendMessage("More than one player matched!", Color.Red);
+            }
+            else if (!players[0].TPAllow && !e.Player.Group.HasPermission(Permissions.tpall))
+            {
+                e.Player.SendMessage(String.Format("You cannot teleport to {0}.", players[0].Name), Color.Red);
             }
             else
             {
@@ -154,7 +163,7 @@ namespace TeleportRequest
                     }
                 }
             }
-            e.Player.SendMessage("There are no teleport requests.", Color.Red);
+            e.Player.SendMessage("There are no pending teleport requests.", Color.Red);
         }
         void TPAHere(CommandArgs e)
         {
@@ -172,6 +181,10 @@ namespace TeleportRequest
             else if (players.Count > 1)
             {
                 e.Player.SendMessage("More than one player matched!", Color.Red);
+            }
+            else if (!players[0].TPAllow && !e.Player.Group.HasPermission(Permissions.tpall))
+            {
+                e.Player.SendMessage(String.Format("You cannot teleport {0}.", players[0].Name), Color.Red);
             }
             else
             {
@@ -207,7 +220,7 @@ namespace TeleportRequest
                     }
                 }
             }
-            e.Player.SendMessage("There are no teleport requests.", Color.Red);
+            e.Player.SendMessage("There are no pending teleport requests.", Color.Red);
         }
     }
 }
