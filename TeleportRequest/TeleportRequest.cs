@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Timers;
 using Hooks;
@@ -129,13 +130,10 @@ namespace TeleportRequest
             {
                 lock (TPRequests)
                 {
-                    foreach (TPRequest tpr in TPRequests)
+                    if (TPRequests.Any(tpr => tpr.dst == players[0].Index))
                     {
-                        if (tpr.dst == players[0].Index)
-                        {
-                            e.Player.SendMessage(String.Format("{0} already has a teleport request.", players[0].Name), Color.Red);
-                            return;
-                        }
+                        e.Player.SendMessage(String.Format("{0} already has a teleport request.", players[0].Name), Color.Red);
+                        return;
                     }
                     TPRequests.Add(new TPRequest((byte)e.Player.Index, (byte)players[0].Index, false, Config.Timeout));
                 }
@@ -190,13 +188,10 @@ namespace TeleportRequest
             {
                 lock (TPRequests)
                 {
-                    foreach (TPRequest tpr in TPRequests)
+                    if (TPRequests.Any(tpr => tpr.dst == players[0].Index))
                     {
-                        if (tpr.dst == players[0].Index)
-                        {
-                            e.Player.SendMessage(String.Format("{0} already has a teleport request.", players[0].Name), Color.Red);
-                            return;
-                        }
+                        e.Player.SendMessage(String.Format("{0} already has a teleport request.", players[0].Name), Color.Red);
+                        return;
                     }
                     TPRequests.Add(new TPRequest((byte)e.Player.Index, (byte)players[0].Index, true, Config.Timeout));
                 }
