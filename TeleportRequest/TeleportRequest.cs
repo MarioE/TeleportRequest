@@ -108,7 +108,7 @@ namespace TeleportRequest
         {
             if (e.Parameters.Count == 0)
             {
-                e.Player.SendMessage("Invalid syntax! Proper syntax: /tpa <player>");
+                e.Player.SendMessage("Invalid syntax! Proper syntax: /tpa <player>", Color.Red);
                 return;
             }
             string plrName = String.Join(" ", e.Parameters.ToArray());
@@ -169,7 +169,7 @@ namespace TeleportRequest
         {
             if (e.Parameters.Count == 0)
             {
-                e.Player.SendMessage("Invalid syntax! Proper syntax: /tpahere <player>");
+                e.Player.SendMessage("Invalid syntax! Proper syntax: /tpahere <player>", Color.Red);
                 return;
             }
             string plrName = String.Join(" ", e.Parameters.ToArray());
