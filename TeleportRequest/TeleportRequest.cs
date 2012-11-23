@@ -83,10 +83,10 @@ namespace TeleportRequest
         }
         void OnInitialize()
         {
-            Commands.ChatCommands.Add(new Command(TPAccept, "tpaccept"));
-            Commands.ChatCommands.Add(new Command(TPDeny, "tpdeny"));
-            Commands.ChatCommands.Add(new Command("tpahere", TPAHere, "tpahere"));
-            Commands.ChatCommands.Add(new Command("tpa", TPA, "tpa"));
+            Commands.ChatCommands.Add(new Command("tprequest.accept", TPAccept, "tpaccept"));
+            Commands.ChatCommands.Add(new Command("tprequest.deny", TPDeny, "tpdeny"));
+            Commands.ChatCommands.Add(new Command("tprequest.tpahere", TPAHere, "tpahere"));
+            Commands.ChatCommands.Add(new Command("tprequest.tpa", TPA, "tpa"));
 
             if (File.Exists(Path.Combine(TShock.SavePath, "tpconfig.json")))
             {
