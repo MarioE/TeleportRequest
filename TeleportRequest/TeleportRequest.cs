@@ -4,13 +4,13 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Timers;
-using Hooks;
 using Terraria;
+using TerrariaApi.Server;
 using TShockAPI;
 
 namespace TeleportRequest
 {
-    [APIVersion(1, 12)]
+    [ApiVersion(1, 14)]
     public class TeleportRequest : TerrariaPlugin
     {
         public override string Author
@@ -42,15 +42,15 @@ namespace TeleportRequest
         {
             if (disposing)
             {
-                GameHooks.Initialize -= OnInitialize;
-                ServerHooks.Leave -= OnLeave;
+				ServerApi.Hooks.GameInitialize.Deregister(this, OnInitialize);
+				ServerApi.Hooks.ServerLeave.Deregister(this, OnLeave);
                 Timer.Dispose();
             }
         }
         public override void Initialize()
         {
-            GameHooks.Initialize += OnInitialize;
-            ServerHooks.Leave += OnLeave;
+			ServerApi.Hooks.GameInitialize.Register(this, OnInitialize);
+			ServerApi.Hooks.ServerLeave.Register(this, OnLeave);
         }
 
         void OnElapsed(object sender, ElapsedEventArgs e)
@@ -65,8 +65,8 @@ namespace TeleportRequest
                     if (tpr.timeout == 0)
                     {
                         TPRequests.RemoveAt(i);
-                        src.SendMessage("Your teleport request timed out.", Color.Red);
-                        dst.SendMessage(String.Format("{0}'s teleport request timed out.", src.Name), Color.Yellow);
+                        src.SendErrorMessage("Your teleport request timed out.");
+                        dst.SendInfoMessage("{0}'s teleport request timed out.", src.Name);
                     }
                     else
                     {
@@ -75,13 +75,13 @@ namespace TeleportRequest
                         {
                             msg = "You are requested to teleport to {0}. (/tpaccept or /tpdeny)";
                         }
-                        dst.SendMessage(String.Format(msg, src.Name), Color.LimeGreen);
+                        dst.SendInfoMessage(msg, src.Name);
                     }
                     tpr.timeout--;
                 }
             }
         }
-        void OnInitialize()
+        void OnInitialize(EventArgs e)
         {
             Commands.ChatCommands.Add(new Command("tprequest.accept", TPAccept, "tpaccept"));
             Commands.ChatCommands.Add(new Command("tprequest.deny", TPDeny, "tpdeny"));
@@ -97,11 +97,11 @@ namespace TeleportRequest
             Timer.Elapsed += OnElapsed;
             Timer.Start();
         }
-        void OnLeave(int plr)
+        void OnLeave(LeaveEventArgs e)
         {
             lock (TPRequests)
             {
-                TPRequests.RemoveAll(tpr => tpr.dst == plr || tpr.src == plr);
+                TPRequests.RemoveAll(tpr => tpr.dst == e.Who || tpr.src == e.Who);
             }
         }
 
@@ -109,22 +109,23 @@ namespace TeleportRequest
         {
             if (e.Parameters.Count == 0)
             {
-                e.Player.SendMessage("Invalid syntax! Proper syntax: /tpa <player>", Color.Red);
+                e.Player.SendErrorMessage("Invalid syntax! Proper syntax: /tpa <player>");
                 return;
             }
+
             string plrName = String.Join(" ", e.Parameters.ToArray());
             List<TSPlayer> players = TShock.Utils.FindPlayer(plrName);
             if (players.Count == 0)
             {
-                e.Player.SendMessage("Invalid player!", Color.Red);
+                e.Player.SendErrorMessage("Invalid player!");
             }
             else if (players.Count > 1)
             {
-                e.Player.SendMessage("More than one player matched!", Color.Red);
+                e.Player.SendErrorMessage("More than one player matched!");
             }
             else if (!players[0].TPAllow && !e.Player.Group.HasPermission(Permissions.tpall))
             {
-                e.Player.SendMessage(String.Format("You cannot teleport to {0}.", players[0].Name), Color.Red);
+                e.Player.SendErrorMessage("You cannot teleport to {0}.", players[0].Name);
             }
             else
             {
@@ -132,12 +133,12 @@ namespace TeleportRequest
                 {
                     if (TPRequests.Any(tpr => tpr.dst == players[0].Index))
                     {
-                        e.Player.SendMessage(String.Format("{0} already has a teleport request.", players[0].Name), Color.Red);
+                        e.Player.SendErrorMessage("{0} already has a teleport request.", players[0].Name);
                         return;
                     }
                     TPRequests.Add(new TPRequest((byte)e.Player.Index, (byte)players[0].Index, false, Config.Timeout));
                 }
-                e.Player.SendMessage(String.Format("Sent a teleport request to {0}.", players[0].Name), Color.Green);
+                e.Player.SendSuccessMessage("Sent a teleport request to {0}.", players[0].Name);
             }
         }
         void TPAccept(CommandArgs e)
@@ -151,38 +152,39 @@ namespace TeleportRequest
                     {
                         TSPlayer plr1 = tpr.dir ? e.Player : TShock.Players[tpr.src];
                         TSPlayer plr2 = tpr.dir ? TShock.Players[tpr.src] : e.Player;
-                        if (plr1.Teleport(plr2.TileX, plr2.TileY + 3))
+                        if (plr1.Teleport(plr2.TileX * 16, plr2.TileY * 16 - 48))
                         {
-                            plr1.SendMessage(String.Format("Teleported to {0}.", plr2.Name), Color.Green);
-                            plr2.SendMessage(String.Format("{0} teleported to you.", plr1.Name), Color.Green);
+                            plr1.SendSuccessMessage("Teleported to {0}.", plr2.Name);
+                            plr2.SendSuccessMessage("{0} teleported to you.", plr1.Name);
                         }
                         TPRequests.RemoveAt(i);
                         return;
                     }
                 }
             }
-            e.Player.SendMessage("There are no pending teleport requests.", Color.Red);
+            e.Player.SendErrorMessage("There are no pending teleport requests.");
         }
         void TPAHere(CommandArgs e)
         {
             if (e.Parameters.Count == 0)
             {
-                e.Player.SendMessage("Invalid syntax! Proper syntax: /tpahere <player>", Color.Red);
+                e.Player.SendErrorMessage("Invalid syntax! Proper syntax: /tpahere <player>");
                 return;
             }
+
             string plrName = String.Join(" ", e.Parameters.ToArray());
             List<TSPlayer> players = TShock.Utils.FindPlayer(plrName);
             if (players.Count == 0)
             {
-                e.Player.SendMessage("Invalid player!", Color.Red);
+                e.Player.SendErrorMessage("Invalid player!");
             }
             else if (players.Count > 1)
             {
-                e.Player.SendMessage("More than one player matched!", Color.Red);
+                e.Player.SendErrorMessage("More than one player matched!");
             }
             else if (!players[0].TPAllow && !e.Player.Group.HasPermission(Permissions.tpall))
             {
-                e.Player.SendMessage(String.Format("You cannot teleport {0}.", players[0].Name), Color.Red);
+                e.Player.SendErrorMessage("You cannot teleport {0}.", players[0].Name);
             }
             else
             {
@@ -190,12 +192,12 @@ namespace TeleportRequest
                 {
                     if (TPRequests.Any(tpr => tpr.dst == players[0].Index))
                     {
-                        e.Player.SendMessage(String.Format("{0} already has a teleport request.", players[0].Name), Color.Red);
+                        e.Player.SendErrorMessage("{0} already has a teleport request.", players[0].Name);
                         return;
                     }
                     TPRequests.Add(new TPRequest((byte)e.Player.Index, (byte)players[0].Index, true, Config.Timeout));
                 }
-                e.Player.SendMessage(String.Format("Sent a teleport request to {0}.", players[0].Name), Color.Green);
+                e.Player.SendSuccessMessage("Sent a teleport request to {0}.", players[0].Name);
             }
         }
         void TPDeny(CommandArgs e)
@@ -208,14 +210,14 @@ namespace TeleportRequest
                     if (tpr.dst == e.Player.Index)
                     {
                         TSPlayer plr = TShock.Players[tpr.src];
-                        e.Player.SendMessage(String.Format("Denied {0}'s request.", plr.Name), Color.Green);
-                        plr.SendMessage(String.Format("{0} denied your request.", e.Player.Name), Color.Red);
+                        e.Player.SendSuccessMessage("Denied {0}'s request.", plr.Name);
+                        plr.SendErrorMessage("{0} denied your request.", e.Player.Name);
                         TPRequests.RemoveAt(i);
                         return;
                     }
                 }
             }
-            e.Player.SendMessage("There are no pending teleport requests.", Color.Red);
+            e.Player.SendErrorMessage("There are no pending teleport requests.");
         }
     }
 }
