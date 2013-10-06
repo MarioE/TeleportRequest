@@ -152,7 +152,7 @@ namespace TeleportRequest
                     {
                         TSPlayer plr1 = tpr.dir ? e.Player : TShock.Players[tpr.src];
                         TSPlayer plr2 = tpr.dir ? TShock.Players[tpr.src] : e.Player;
-                        if (plr1.Teleport(plr2.TileX * 16, plr2.TileY * 16 - 48))
+                        if (plr1.Teleport(plr2.X, plr2.Y))
                         {
                             plr1.SendSuccessMessage("Teleported to {0}.", plr2.Name);
                             plr2.SendSuccessMessage("{0} teleported to you.", plr1.Name);
