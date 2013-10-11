@@ -27,7 +27,7 @@ namespace TeleportRequest
             get { return "Teleport"; }
         }
         private Timer Timer;
-        private List<TPRequest> TPRequests = new List<TPRequest>();
+		private TPRequest[] TPRequests = new TPRequest[256];
         public override Version Version
         {
             get { return Assembly.GetExecutingAssembly().GetName().Version; }
@@ -36,9 +36,13 @@ namespace TeleportRequest
         public TeleportRequest(Main game)
             : base(game)
         {
+			for (int i = 0; i < TPRequests.Length; i++)
+			{
+				TPRequests[i] = new TPRequest();
+			}
         }
 
-        protected override void Dispose(bool disposing)
+		protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
@@ -55,38 +59,53 @@ namespace TeleportRequest
 
         void OnElapsed(object sender, ElapsedEventArgs e)
         {
-            lock (TPRequests)
-            {
-                for (int i = TPRequests.Count - 1; i >= 0; i--)
-                {
-                    TPRequest tpr = TPRequests[i];
-                    TSPlayer dst = TShock.Players[tpr.dst];
-                    TSPlayer src = TShock.Players[tpr.src];
-                    if (tpr.timeout == 0)
-                    {
-                        TPRequests.RemoveAt(i);
-                        src.SendErrorMessage("Your teleport request timed out.");
-                        dst.SendInfoMessage("{0}'s teleport request timed out.", src.Name);
-                    }
-                    else
-                    {
-                        string msg = "{0} is requesting to teleport to you. (/tpaccept or /tpdeny)";
-                        if (tpr.dir)
-                        {
-                            msg = "You are requested to teleport to {0}. (/tpaccept or /tpdeny)";
-                        }
-                        dst.SendInfoMessage(msg, src.Name);
-                    }
-                    tpr.timeout--;
-                }
-            }
+			for (int i = 0; i < TPRequests.Length; i++)
+			{
+				TPRequest tpr = TPRequests[i];
+				if (tpr.timeout > 0)
+				{
+					TSPlayer dst = TShock.Players[tpr.dst];
+					TSPlayer src = TShock.Players[i];
+					if (tpr.timeout == 0)
+					{
+						src.SendErrorMessage("Your teleport request timed out.");
+						dst.SendInfoMessage("{0}'s teleport request timed out.", src.Name);
+					}
+					else
+					{
+						string msg = "{0} is requesting to teleport to you. (/tpaccept or /tpdeny)";
+						if (tpr.dir)
+						{
+							msg = "You are requested to teleport to {0}. (/tpaccept or /tpdeny)";
+						}
+						dst.SendInfoMessage(msg, src.Name);
+					}
+					tpr.timeout--;
+				}
+			}
         }
         void OnInitialize(EventArgs e)
         {
-            Commands.ChatCommands.Add(new Command("tprequest.accept", TPAccept, "tpaccept"));
-            Commands.ChatCommands.Add(new Command("tprequest.deny", TPDeny, "tpdeny"));
-            Commands.ChatCommands.Add(new Command("tprequest.tpahere", TPAHere, "tpahere"));
-            Commands.ChatCommands.Add(new Command("tprequest.tpa", TPA, "tpa"));
+			Commands.ChatCommands.Add(new Command("tprequest.accept", TPAccept, "tpaccept")
+			{
+				AllowServer = false,
+				HelpText = "Accepts a teleport request."
+			});
+			Commands.ChatCommands.Add(new Command("tprequest.deny", TPDeny, "tpdeny")
+			{
+				AllowServer = false,
+				HelpText = "Denies a teleport request."
+			});
+			Commands.ChatCommands.Add(new Command("tprequest.tpahere", TPAHere, "tpahere")
+			{
+				AllowServer = false,
+				HelpText = "Sends a request for someone to teleport to you."
+			});
+			Commands.ChatCommands.Add(new Command("tprequest.tpa", TPA, "tpa")
+			{
+				AllowServer = false,
+				HelpText = "Sends a request to teleport to someone."
+			});
 
             if (File.Exists(Path.Combine(TShock.SavePath, "tpconfig.json")))
             {
@@ -99,10 +118,7 @@ namespace TeleportRequest
         }
         void OnLeave(LeaveEventArgs e)
         {
-            lock (TPRequests)
-            {
-                TPRequests.RemoveAll(tpr => tpr.dst == e.Who || tpr.src == e.Who);
-            }
+			TPRequests[e.Who].timeout = 0;
         }
 
         void TPA(CommandArgs e)
@@ -129,40 +145,40 @@ namespace TeleportRequest
             }
             else
             {
-                lock (TPRequests)
-                {
-                    if (TPRequests.Any(tpr => tpr.dst == players[0].Index))
-                    {
-                        e.Player.SendErrorMessage("{0} already has a teleport request.", players[0].Name);
-                        return;
-                    }
-                    TPRequests.Add(new TPRequest((byte)e.Player.Index, (byte)players[0].Index, false, Config.Timeout));
-                }
+				for (int i = 0; i < TPRequests.Length; i++)
+				{
+					TPRequest tpr = TPRequests[i];
+					if (tpr.timeout > 0 && tpr.dst == players[0].Index)
+					{
+						e.Player.SendErrorMessage("{0} already has a teleport request.", players[0].Name);
+						return;
+					}
+				}
+				TPRequests[e.Player.Index].dir = false;
+				TPRequests[e.Player.Index].dst = (byte)players[0].Index;
+				TPRequests[e.Player.Index].timeout = Config.Timeout;
                 e.Player.SendSuccessMessage("Sent a teleport request to {0}.", players[0].Name);
             }
         }
         void TPAccept(CommandArgs e)
         {
-            lock (TPRequests)
+            for (int i = 0; i < TPRequests.Length; i++)
             {
-                for (int i = TPRequests.Count - 1; i >= 0; i--)
+                TPRequest tpr = TPRequests[i];
+                if (tpr.timeout > 0 && tpr.dst == e.Player.Index)
                 {
-                    TPRequest tpr = TPRequests[i];
-                    if (tpr.dst == e.Player.Index)
+                    TSPlayer plr1 = tpr.dir ? e.Player : TShock.Players[i];
+                    TSPlayer plr2 = tpr.dir ? TShock.Players[i] : e.Player;
+                    if (plr1.Teleport(plr2.X, plr2.Y))
                     {
-                        TSPlayer plr1 = tpr.dir ? e.Player : TShock.Players[tpr.src];
-                        TSPlayer plr2 = tpr.dir ? TShock.Players[tpr.src] : e.Player;
-                        if (plr1.Teleport(plr2.X, plr2.Y))
-                        {
-                            plr1.SendSuccessMessage("Teleported to {0}.", plr2.Name);
-                            plr2.SendSuccessMessage("{0} teleported to you.", plr1.Name);
-                        }
-                        TPRequests.RemoveAt(i);
-                        return;
+                        plr1.SendSuccessMessage("Teleported to {0}.", plr2.Name);
+                        plr2.SendSuccessMessage("{0} teleported to you.", plr1.Name);
                     }
+					tpr.timeout = 0;
+                    return;
                 }
             }
-            e.Player.SendErrorMessage("There are no pending teleport requests.");
+            e.Player.SendErrorMessage("You have no pending teleport requests.");
         }
         void TPAHere(CommandArgs e)
         {
@@ -188,36 +204,35 @@ namespace TeleportRequest
             }
             else
             {
-                lock (TPRequests)
-                {
-                    if (TPRequests.Any(tpr => tpr.dst == players[0].Index))
-                    {
-                        e.Player.SendErrorMessage("{0} already has a teleport request.", players[0].Name);
-                        return;
-                    }
-                    TPRequests.Add(new TPRequest((byte)e.Player.Index, (byte)players[0].Index, true, Config.Timeout));
-                }
-                e.Player.SendSuccessMessage("Sent a teleport request to {0}.", players[0].Name);
+				for (int i = 0; i < TPRequests.Length; i++)
+				{
+					TPRequest tpr = TPRequests[i];
+					if (tpr.timeout > 0 && tpr.dst == players[0].Index)
+					{
+						e.Player.SendErrorMessage("{0} already has a teleport request.", players[0].Name);
+						return;
+					}
+				}
+				TPRequests[e.Player.Index].dir = true;
+				TPRequests[e.Player.Index].dst = (byte)players[0].Index;
+				TPRequests[e.Player.Index].timeout = Config.Timeout;
+				e.Player.SendSuccessMessage("Sent a teleport request to {0}.", players[0].Name);
             }
         }
         void TPDeny(CommandArgs e)
         {
-            lock (TPRequests)
-            {
-                for (int i = TPRequests.Count - 1; i >= 0; i--)
-                {
-                    TPRequest tpr = TPRequests[i];
-                    if (tpr.dst == e.Player.Index)
-                    {
-                        TSPlayer plr = TShock.Players[tpr.src];
-                        e.Player.SendSuccessMessage("Denied {0}'s request.", plr.Name);
-                        plr.SendErrorMessage("{0} denied your request.", e.Player.Name);
-                        TPRequests.RemoveAt(i);
-                        return;
-                    }
-                }
-            }
-            e.Player.SendErrorMessage("There are no pending teleport requests.");
+			for (int i = 0; i < TPRequests.Length; i++)
+			{
+				TPRequest tpr = TPRequests[i];
+				if (tpr.timeout > 0 && tpr.dst == e.Player.Index)
+				{
+					e.Player.SendSuccessMessage("Denied {0}'s teleport request.", TShock.Players[i].Name);
+					TShock.Players[i].SendErrorMessage("{0} denied your teleport request.", e.Player.Name);
+					return;
+				}
+			}
+			
+            e.Player.SendErrorMessage("You have no pending teleport requests.");
         }
     }
 }
