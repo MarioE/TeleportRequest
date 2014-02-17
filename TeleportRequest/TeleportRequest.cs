@@ -10,7 +10,7 @@ using TShockAPI;
 
 namespace TeleportRequest
 {
-    [ApiVersion(1, 14)]
+    [ApiVersion(1, 15)]
     public class TeleportRequest : TerrariaPlugin
     {
         public override string Author
@@ -37,9 +37,7 @@ namespace TeleportRequest
             : base(game)
         {
 			for (int i = 0; i < TPRequests.Length; i++)
-			{
 				TPRequests[i] = new TPRequest();
-			}
         }
 
 		protected override void Dispose(bool disposing)
@@ -75,9 +73,7 @@ namespace TeleportRequest
 					{
 						string msg = "{0} is requesting to teleport to you. (/tpaccept or /tpdeny)";
 						if (tpr.dir)
-						{
 							msg = "You are requested to teleport to {0}. (/tpaccept or /tpdeny)";
-						}
 						dst.SendInfoMessage(msg, src.Name);
 					}
 					tpr.timeout--;
@@ -108,9 +104,7 @@ namespace TeleportRequest
 			});
 
             if (File.Exists(Path.Combine(TShock.SavePath, "tpconfig.json")))
-            {
                 Config = Config.Read(Path.Combine(TShock.SavePath, "tpconfig.json"));
-            }
             Config.Write(Path.Combine(TShock.SavePath, "tpconfig.json"));
             Timer = new Timer(Config.Interval * 1000);
             Timer.Elapsed += OnElapsed;
@@ -132,17 +126,11 @@ namespace TeleportRequest
             string plrName = String.Join(" ", e.Parameters.ToArray());
             List<TSPlayer> players = TShock.Utils.FindPlayer(plrName);
             if (players.Count == 0)
-            {
                 e.Player.SendErrorMessage("Invalid player!");
-            }
             else if (players.Count > 1)
-            {
                 e.Player.SendErrorMessage("More than one player matched!");
-            }
             else if (!players[0].TPAllow && !e.Player.Group.HasPermission(Permissions.tpall))
-            {
                 e.Player.SendErrorMessage("You cannot teleport to {0}.", players[0].Name);
-            }
             else
             {
 				for (int i = 0; i < TPRequests.Length; i++)
@@ -191,17 +179,11 @@ namespace TeleportRequest
             string plrName = String.Join(" ", e.Parameters.ToArray());
             List<TSPlayer> players = TShock.Utils.FindPlayer(plrName);
             if (players.Count == 0)
-            {
                 e.Player.SendErrorMessage("Invalid player!");
-            }
             else if (players.Count > 1)
-            {
                 e.Player.SendErrorMessage("More than one player matched!");
-            }
             else if (!players[0].TPAllow && !e.Player.Group.HasPermission(Permissions.tpall))
-            {
                 e.Player.SendErrorMessage("You cannot teleport {0}.", players[0].Name);
-            }
             else
             {
 				for (int i = 0; i < TPRequests.Length; i++)
