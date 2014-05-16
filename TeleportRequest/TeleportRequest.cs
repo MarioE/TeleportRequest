@@ -10,7 +10,7 @@ using TShockAPI;
 
 namespace TeleportRequest
 {
-    [ApiVersion(1, 15)]
+    [ApiVersion(1, 16)]
     public class TeleportRequest : TerrariaPlugin
     {
         public override string Author
