@@ -5,10 +5,9 @@ using System.Text;
 
 namespace TeleportRequest
 {
-	public class TPRequest
+	enum TPOverride
 	{
-		public bool dir;
-		public byte dst;
-		public int timeout;
+		NONE,
+		DENY
 	}
 }

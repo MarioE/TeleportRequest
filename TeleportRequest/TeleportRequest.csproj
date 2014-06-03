@@ -53,6 +53,7 @@
     <Compile Include="Config.cs" />
     <Compile Include="TeleportRequest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TPOverride.cs" />
     <Compile Include="TPRequest.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
