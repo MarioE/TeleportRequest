@@ -65,6 +65,8 @@ namespace TeleportRequest
 				{
 					TSPlayer dst = TShock.Players[tpr.dst];
 					TSPlayer src = TShock.Players[i];
+
+					tpr.timeout--;
 					if (tpr.timeout == 0)
 					{
 						src.SendErrorMessage("Your teleport request timed out.");
@@ -77,7 +79,6 @@ namespace TeleportRequest
 							msg = "You are requested to teleport to {0}. (/tpaccept or /tpdeny)";
 						dst.SendInfoMessage(msg, src.Name);
 					}
-					tpr.timeout--;
 				}
 			}
 		}
@@ -118,6 +119,7 @@ namespace TeleportRequest
 		}
 		void OnLeave(LeaveEventArgs e)
 		{
+			TPOverrides[e.Who] = TPOverride.NONE;
 			TPRequests[e.Who].timeout = 0;
 		}
 
