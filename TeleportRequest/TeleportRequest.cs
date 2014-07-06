@@ -27,7 +27,7 @@ namespace TeleportRequest
 			get { return "Teleport"; }
 		}
 		private Timer Timer;
-		private TPOverride[] TPOverrides = new TPOverride[256];
+		private bool[] TPAllows = new bool[256];
 		private TPRequest[] TPRequests = new TPRequest[256];
 		public override Version Version
 		{
@@ -89,15 +89,15 @@ namespace TeleportRequest
 				AllowServer = false,
 				HelpText = "Accepts a teleport request."
 			});
+			Commands.ChatCommands.Add(new Command("tprequest.autodeny", TPAutoDeny, "tpautodeny")
+			{
+				AllowServer = false,
+				HelpText = "Toggles automatic denial of teleport requests."
+			});
 			Commands.ChatCommands.Add(new Command("tprequest.deny", TPDeny, "tpdeny")
 			{
 				AllowServer = false,
 				HelpText = "Denies a teleport request."
-			});
-			Commands.ChatCommands.Add(new Command("tprequest.override", TPOverrideCmd, "tpoverride")
-			{
-				AllowServer = false,
-				HelpText = "Automatically overrides teleport requests to either accept or deny them."
 			});
 			Commands.ChatCommands.Add(new Command("tprequest.tpahere", TPAHere, "tpahere")
 			{
@@ -119,7 +119,7 @@ namespace TeleportRequest
 		}
 		void OnLeave(LeaveEventArgs e)
 		{
-			TPOverrides[e.Who] = TPOverride.NONE;
+			TPAllows[e.Who] = false;
 			TPRequests[e.Who].timeout = 0;
 		}
 
@@ -132,15 +132,13 @@ namespace TeleportRequest
 			}
 
 			string plrName = String.Join(" ", e.Parameters.ToArray());
-			List<TSPlayer> players = TShock.Utils.FindPlayer(plrName);
+			var players = TShock.Utils.FindPlayer(plrName);
 			if (players.Count == 0)
 				e.Player.SendErrorMessage("Invalid player!");
 			else if (players.Count > 1)
 				e.Player.SendErrorMessage("More than one player matched!");
-			else if (!players[0].TPAllow && !e.Player.Group.HasPermission(Permissions.tpall))
+			else if ((!players[0].TPAllow || TPAllows[players[0].Index]) && !e.Player.Group.HasPermission(Permissions.tpoverride))
 				e.Player.SendErrorMessage("You cannot teleport to {0}.", players[0].Name);
-			else if (TPOverrides[players[0].Index] == TPOverride.DENY)
-				e.Player.SendInfoMessage("{0} denied your teleport request.", players[0].Name);
 			else
 			{
 				for (int i = 0; i < TPRequests.Length; i++)
@@ -154,7 +152,7 @@ namespace TeleportRequest
 				}
 				TPRequests[e.Player.Index].dir = false;
 				TPRequests[e.Player.Index].dst = (byte)players[0].Index;
-				TPRequests[e.Player.Index].timeout = Config.Timeout;
+				TPRequests[e.Player.Index].timeout = Config.Timeout + 1;
 				e.Player.SendSuccessMessage("Sent a teleport request to {0}.", players[0].Name);
 			}
 		}
@@ -187,15 +185,13 @@ namespace TeleportRequest
 			}
 
 			string plrName = String.Join(" ", e.Parameters.ToArray());
-			List<TSPlayer> players = TShock.Utils.FindPlayer(plrName);
+			var players = TShock.Utils.FindPlayer(plrName);
 			if (players.Count == 0)
 				e.Player.SendErrorMessage("Invalid player!");
 			else if (players.Count > 1)
 				e.Player.SendErrorMessage("More than one player matched!");
-			else if (!players[0].TPAllow && !e.Player.Group.HasPermission(Permissions.tpall))
+			else if ((!players[0].TPAllow || TPAllows[players[0].Index]) && !e.Player.Group.HasPermission(Permissions.tpoverride))
 				e.Player.SendErrorMessage("You cannot teleport {0}.", players[0].Name);
-			else if (TPOverrides[players[0].Index] == TPOverride.DENY)
-				e.Player.SendInfoMessage("{0} denied your teleport request.", players[0].Name);
 			else
 			{
 				for (int i = 0; i < TPRequests.Length; i++)
@@ -209,9 +205,14 @@ namespace TeleportRequest
 				}
 				TPRequests[e.Player.Index].dir = true;
 				TPRequests[e.Player.Index].dst = (byte)players[0].Index;
-				TPRequests[e.Player.Index].timeout = Config.Timeout;
+				TPRequests[e.Player.Index].timeout = Config.Timeout + 1;
 				e.Player.SendSuccessMessage("Sent a teleport request to {0}.", players[0].Name);
 			}
+		}
+		void TPAutoDeny(CommandArgs e)
+		{
+			TPAllows[e.Player.Index] = !TPAllows[e.Player.Index];
+			e.Player.SendInfoMessage("{0}abled TP override denial.", TPAllows[e.Player.Index] ? "En" : "Dis");
 		}
 		void TPDeny(CommandArgs e)
 		{
@@ -226,29 +227,6 @@ namespace TeleportRequest
 				}
 			}
 			e.Player.SendErrorMessage("You have no pending teleport requests.");
-		}
-		void TPOverrideCmd(CommandArgs e)
-		{
-			if (e.Parameters.Count != 1)
-			{
-				e.Player.SendErrorMessage("Invalid syntax! Proper syntax: /tpoverride <none|deny>");
-				return;
-			}
-
-			switch (e.Parameters[0].ToLower())
-			{
-				case "deny":
-					TPOverrides[e.Player.Index] = TPOverride.DENY;
-					e.Player.SendInfoMessage("Set TP override to deny.");
-					return;
-				case "none":
-					TPOverrides[e.Player.Index] = TPOverride.NONE;
-					e.Player.SendInfoMessage("Disabled TP override.");
-					return;
-				default:
-					e.Player.SendErrorMessage("Invalid syntax! Proper syntax: /tpoverride <none|accept|deny>");
-					return;
-			}
 		}
 	}
 }
